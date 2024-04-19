@@ -150,12 +150,14 @@ for requests involving `auth_request`.
     [tip](http://mdounin.ru/hg/ngx_http_auth_request_module/archive/tip.tar.gz)
     or clone this repo:
 
-        git clone git://github.com/perusio/nginx-auth-request-module.git
+        git clone git@github.com:CoolCold/nginx-auth-request-module.git
     
- 2.  2. Add the module to the build configuration by adding
-    `--add-module=/path/to/ngx_http_auth_request_module`.
+ 2. Compilation
+    1. Static: Add the module to the build configuration by adding
+    `--add-module=/path/to/ngx_http_auth_request_module_dir`.
+    1. Dynamic: `./configure --add-dynamic-module=/path/to/ngx_http_auth_request_module_dir  --with-compat`
     
- 3. Build the nginx binary.
+ 3. Build the nginx binary - `make` or for dynamic one you may use `make modules`.
  
  4. Install nginx binary.
  
