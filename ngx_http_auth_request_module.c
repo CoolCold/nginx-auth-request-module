@@ -1,6 +1,7 @@
 
 /*
  * Copyright (C) Maxim Dounin
+ * Copyright (C) Nginx, Inc.
  */
 
 
@@ -14,11 +15,13 @@ typedef struct {
     ngx_array_t              *vars;
 } ngx_http_auth_request_conf_t;
 
+
 typedef struct {
     ngx_uint_t                done;
     ngx_uint_t                status;
     ngx_http_request_t       *subrequest;
 } ngx_http_auth_request_ctx_t;
+
 
 typedef struct {
     ngx_int_t                 index;
@@ -98,7 +101,7 @@ ngx_module_t  ngx_http_auth_request_module = {
 static ngx_int_t
 ngx_http_auth_request_handler(ngx_http_request_t *r)
 {
-    ngx_table_elt_t               *h, *ho;
+    ngx_table_elt_t               *h, *ho, **ph;
     ngx_http_request_t            *sr;
     ngx_http_post_subrequest_t    *ps;
     ngx_http_auth_request_ctx_t   *ctx;
@@ -144,15 +147,21 @@ ngx_http_auth_request_handler(ngx_http_request_t *r)
                 h = sr->upstream->headers_in.www_authenticate;
             }
 
-            if (h) {
+            ph = &r->headers_out.www_authenticate;
+
+            while (h) {
                 ho = ngx_list_push(&r->headers_out.headers);
                 if (ho == NULL) {
                     return NGX_ERROR;
                 }
 
                 *ho = *h;
+                ho->next = NULL;
 
-                r->headers_out.www_authenticate = ho;
+                *ph = ho;
+                ph = &ho->next;
+
+                h = h->next;
             }
 
             return ctx->status;
@@ -165,7 +174,7 @@ ngx_http_auth_request_handler(ngx_http_request_t *r)
         }
 
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                      "auth request unexpected status: %d", ctx->status);
+                      "auth request unexpected status: %ui", ctx->status);
 
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
@@ -216,7 +225,7 @@ ngx_http_auth_request_done(ngx_http_request_t *r, void *data, ngx_int_t rc)
     ngx_http_auth_request_ctx_t   *ctx = data;
 
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                   "auth request done s:%d", r->headers_out.status);
+                   "auth request done s:%ui", r->headers_out.status);
 
     ctx->done = 1;
     ctx->status = r->headers_out.status;
@@ -309,7 +318,7 @@ ngx_http_auth_request_create_conf(ngx_conf_t *cf)
     /*
      * set by ngx_pcalloc():
      *
-     *     conf->uri.len = { 0, NULL };
+     *     conf->uri = { 0, NULL };
      */
 
     conf->vars = NGX_CONF_UNSET_PTR;
@@ -385,7 +394,7 @@ ngx_http_auth_request_set(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_http_variable_t               *v;
     ngx_http_auth_request_variable_t  *av;
     ngx_http_compile_complex_value_t   ccv;
-    
+
     value = cf->args->elts;
 
     if (value[1].data[0] != '$') {
